@@ -1,10 +1,5 @@
   location <%= location %> {
-<% if @location_cfg_prepend -%><% location_cfg_prepend.each do |key,value| -%>
-    <%= key %> <%= value %>;
-<% end -%><% end -%>
+<%= scope.function_template(['nginx/vhost/_location_cfg_prepend.erb']) -%>
     proxy_pass <%= proxy %>;
-    proxy_read_timeout <%= proxy_read_timeout %>;
-<% if @location_cfg_append -%><% location_cfg_append.each do |key,value| -%>
-    <%= key %> <%= value %>;
-<% end -%><% end -%>
+<%= scope.function_template(['nginx/vhost/_location_cfg_append.erb']) -%>
   }

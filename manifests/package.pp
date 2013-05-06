@@ -36,5 +36,11 @@ class nginx::package {
         before  => Anchor['nginx::package::end'],
       }
     }
+    freebsd: {
+      class { 'nginx::package::freebsd':
+        require => Anchor['nginx::package::begin'],
+        before  => Anchor['nginx::package::end'],
+      }
+    }
   }
 }

@@ -5,7 +5,9 @@
 # Parameters:
 #   [*ensure*]               - Enables or disables the specified location (present|absent)
 #   [*vhost*]                - Defines the default vHost for this location entry to include with
+#   [*vhost_order*]          - See order option in nginx::resource::vhost defaults to 100.
 #   [*location*]             - Specifies the URI associated with this location entry
+#   [*run_host*]             - List of hosts to realize this location on if created as a virtual/exported resource.
 #   [*www_root*]             - Specifies the location on disk for files to be read from. Cannot be set in conjunction with $proxy
 #   [*index_files*]          - Default index files for NGINX to read when traversing a directory
 #   [*proxy*]                - Proxy server(s) for a location to connect to. Accepts a single value, can be used in conjunction
@@ -50,10 +52,12 @@
 define nginx::resource::location(
   $ensure               = present,
   $vhost                = undef,
+  $vhost_order          = '100',
+  $run_host             = [$::fqdn],
   $www_root             = undef,
   $index_files          = ['index.html', 'index.htm', 'index.php'],
   $proxy                = undef,
-  $proxy_read_timeout   = $nginx::params::nx_proxy_read_timeout,
+  $proxy_read_timeout   = undef,
   $ssl                  = false,
   $ssl_only		= false,
   $location_alias       = undef,
@@ -64,17 +68,17 @@ define nginx::resource::location(
   $try_files            = undef,
   $location
 ) {
-  File {
-    owner  => 'root',
-    group  => 'root',
-    mode   => '0644',
-    notify => Class['nginx::service'],
-  }
+  require nginx::params
+  require concat::setup
 
-  ## Shared Variables
-  $ensure_real = $ensure ? {
-    'absent' => absent,
-    default  => file,
+  # Tagging stuff
+  tag_array(regsubst($run_host,'^','nginx::run::'))
+
+  $target = "${::nginx::params::nx_conf_dir}/conf.d/vhost_${vhost_order}_${vhost}.conf"
+
+  Concat::Fragment {
+    ensure => $ensure,
+    target => $target,
   }
 
   # Use proxy template if $proxy is defined, otherwise use directory template.
@@ -92,8 +96,8 @@ define nginx::resource::location(
   if ($vhost == undef) {
     fail('Cannot create a location reference without attaching to a virtual host')
   }
-  if (($www_root == undef) and ($proxy == undef) and ($location_alias == undef) and ($stub_status == undef) ) {
-    fail('Cannot create a location reference without a www_root, proxy, location_alias or stub_status defined')
+  if (($www_root == undef) and ($proxy == undef) and ($location_alias == undef) and ($stub_status == undef) and ($try_files == undef )) {
+    fail('Cannot create a location reference without a www_root, proxy, location_alias, stub_status, or try_files defined')
   }
   if (($www_root != undef) and ($proxy != undef)) {
     fail('Cannot define both directory and proxy in a virtual host')
@@ -101,17 +105,17 @@ define nginx::resource::location(
 
   ## Create stubs for vHost File Fragment Pattern
   if ($ssl_only != 'true') {
-    file {"${nginx::config::nx_temp_dir}/nginx.d/${vhost}-500-${name}":
-      ensure  => $ensure_real,
+    concat::fragment { "${target}-${name}":
       content => $content_real,
+      order => '500',
     }
   }
 
   ## Only create SSL Specific locations if $ssl is true.
   if ($ssl == 'true') {
-    file {"${nginx::config::nx_temp_dir}/nginx.d/${vhost}-800-${name}-ssl":
-      ensure  => $ensure_real,
+    concat::fragment { "${target}-${name}-ssl":
       content => $content_real,
+      order => '800',
     }
   }
 }

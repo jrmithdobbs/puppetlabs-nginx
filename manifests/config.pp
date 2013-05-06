@@ -13,65 +13,94 @@
 # Sample Usage:
 #
 # This class file is not called directly
-class nginx::config(
-  $worker_processes    = $nginx::params::nx_worker_processes,
-  $worker_connections  = $nginx::params::nx_worker_connections,
-  $proxy_set_header    = $nginx::params::nx_proxy_set_header,
-  $confd_purge         = $nginx::params::nx_confd_purge
-) inherits nginx::params {
+class nginx::config inherits nginx::params {
+  require concat::setup
+  $run_tag = "nginx::run::${fqdn}"
+
   File {
     owner => 'root',
-    group => 'root',
+    group => $::nginx::params::nx_root_group,
     mode  => '0644',
   }
 
-  file { "${nginx::params::nx_conf_dir}":
+  Concat {
+    owner => 'root',
+    group => $::nginx::params::nx_root_group,
+    mode  => '0644',
+    notify => Service['nginx'],
+  }
+
+  Concat::Fragment {
+    ensure => present,
+  }
+
+  file { "${::nginx::params::nx_conf_dir}":
     ensure => directory,
   }
 
-  file { "${nginx::params::nx_conf_dir}/conf.d":
+  file { "${::nginx::params::nx_conf_dir}/conf.d":
     ensure => directory,
   }
-  if $confd_purge == true {
-    File["${nginx::params::nx_conf_dir}/conf.d"] {
+  if $::nginx::params::nx_confd_purge == true {
+    File["${::nginx::params::nx_conf_dir}/conf.d"] {
       ignore => "vhost_autogen.conf",
       purge => true,
       recurse => true,
     }
   }
 
-
-  file { "${nginx::config::nx_run_dir}":
+  file { "${::nginx::params::nx_run_dir}":
     ensure => directory,
   }
 
-  file { "${nginx::config::nx_client_body_temp_path}":
+  file { "${::nginx::params::nx_client_body_temp_path}":
     ensure => directory,
-    owner  => $nginx::params::nx_daemon_user,
+    owner  => $::nginx::params::nx_daemon_user,
+    group  => $::nginx::params::nx_daemon_group,
   }
 
-  file {"${nginx::config::nx_proxy_temp_path}":
+  file {"${::nginx::params::nx_proxy_temp_path}":
     ensure => directory,
-    owner  => $nginx::params::nx_daemon_user,
+    owner  => $::nginx::params::nx_daemon_user,
+    group  => $::nginx::params::nx_daemon_group,
   }
 
   file { '/etc/nginx/sites-enabled/default':
     ensure => absent,
   }
 
-  file { "${nginx::params::nx_conf_dir}/nginx.conf":
-    ensure  => file,
-    content => template('nginx/conf.d/nginx.conf.erb'),
+  $toplevel_configs = [
+    "${::nginx::params::nx_conf_dir}/nginx.conf",
+    "${::nginx::params::nx_conf_dir}/conf.d/proxy.conf",
+    "${::nginx::params::nx_conf_dir}/conf.d/upstream.conf",
+  ]
+
+  concat { $toplevel_configs:; }
+
+  concat::fragment {
+    "${::nginx::params::nx_conf_dir}/nginx.conf-from_config":
+      target => "${::nginx::params::nx_conf_dir}/nginx.conf",
+      content => template('nginx/conf.d/nginx.conf.erb'),
+      order => '001',
+    ;
+    "${::nginx::params::nx_conf_dir}/conf.d/proxy.conf-from_config":
+      target => "${::nginx::params::nx_conf_dir}/conf.d/proxy.conf",
+      content => template('nginx/conf.d/proxy.conf.erb'),
+      order => '001',
+    ;
+    "${::nginx::params::nx_conf_dir}/conf.d/upstream.conf-from_config":
+      target => "${::nginx::params::nx_conf_dir}/conf.d/upstream.conf",
+      content => '# upstream.conf',
+      order => '001',
+    ;
   }
 
-  file { "${nginx::params::nx_conf_dir}/conf.d/proxy.conf":
-    ensure  => file,
-    content => template('nginx/conf.d/proxy.conf.erb'),
-  }
-
-  file { "${nginx::config::nx_temp_dir}/nginx.d":
-    ensure  => directory,
-    purge   => true,
-    recurse => true,
-  }
+  ## Realize all locally defined nginx resources
+  Nginx::Resource::Upstream <| |>
+  Nginx::Resource::Vhost <|  |>
+  Nginx::Resource::Location <|  |>
+  ## Realize all exported nginx resources defined to run on us
+  Nginx::Resource::Upstream <<| tag == $run_tag |>>
+  Nginx::Resource::Vhost <<| tag == $run_tag |>>
+  Nginx::Resource::Location <<| tag == $run_tag |>>
 }

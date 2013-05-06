@@ -1,0 +1,6 @@
+<% if @location_cfg_append -%><% location_cfg_append.sort.each do |key,value| -%>
+<% if value -%><% if value.is_a?(Array) -%><% value.each do |v| -%>
+    <%= "#{key} #{v}" -%>;
+<% end -%><% else -%>
+    <%= "#{key} #{value}" -%>;
+<% end -%><% end -%><% end -%><% end -%>

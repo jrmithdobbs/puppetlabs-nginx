@@ -4,6 +4,7 @@
 #
 # Parameters:
 #   [*ensure*]      - Enables or disables the specified location (present|absent)
+#   [*run_host*]    - List of hosts to realize this upstream backend on if created as a virtual/exported resource.
 #   [*members*]     - Array of member URIs for NGINX to connect to. Must follow valid NGINX syntax.
 #
 # Actions:
@@ -20,21 +21,22 @@
 #    ],
 #  }
 define nginx::resource::upstream (
-  $ensure = 'present',
+  $ensure = present,
+  $run_host = [$::fqdn],
   $members
 ) {
-  File {
-    owner => 'root',
-    group => 'root',
-    mode  => '0644',
-  }
+  require nginx::params
+  require concat::setup
 
-  file { "/etc/nginx/conf.d/${name}-upstream.conf":
-    ensure   => $ensure ? {
-      'absent' => absent,
-      default  => 'file',
-    },
-    content  => template('nginx/conf.d/upstream.erb'),
-    notify   => Class['nginx::service'],
+  # Tagging stuff
+  tag_array(regsubst($run_host,'^','nginx::run::'))
+
+  $target = "${::nginx::params::nx_conf_dir}/conf.d/upstream.conf"
+
+  concat::fragment { "${target}-${name}-upstream":
+    target => $target,
+    content => template('nginx/conf.d/upstream.erb'),
+    notify => Class['nginx::service'],
+    order => '100',
   }
 }

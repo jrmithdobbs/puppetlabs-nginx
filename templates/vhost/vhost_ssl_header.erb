@@ -1,16 +1,11 @@
-server {
-  listen       <%= ssl_port %>;
-  <% if ipv6_enable == 'true' && (defined? ipaddress6) %>
-  listen [<%= ipv6_listen_ip %>]:<%= ipv6_listen_port %> <% if @ipv6_listen_options %><%= ipv6_listen_options %><% end %> ipv6only=on;
-  <% end %>
-  server_name  <%= rewrite_www_to_non_www ? name.gsub(/^www\./, '') : server_name.join(" ") %>;
-
-  ssl on;
-  ssl_certificate      <%= ssl_cert %>;
-  ssl_certificate_key  <%= ssl_key %>;
-
-  ssl_session_timeout  5m;
-
-  ssl_protocols  SSLv3 TLSv1;
-  ssl_ciphers  ALL:!ADH:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv3:+EXP;
-  ssl_prefer_server_ciphers   on;
+<%# This replaces any listen lines from vhost_header template with correct port and ssl option. -%>
+<%= scope.function_template(['nginx/vhost/vhost_header.erb'])
+    .gsub!(/listen ([^]]*[]]|[^:]*):#{scope.lookupvar('listen_port')} /,
+      "listen \\1:#{scope.lookupvar('ssl_port')} ssl ") -%>
+  ssl_prefer_server_ciphers on;
+  ssl_protocols <%= ssl_protocols.join(' ') %> ;
+  ssl_ciphers "<%= ssl_ciphers.join(':') %>" ;
+  ssl_certificate     <%= ssl_cert %>;
+  ssl_certificate_key <%= ssl_key %>;
+<%# Since we allow <= TLSv1.1 we must set timeout to <= 5m -%>
+  ssl_session_timeout 5m;
