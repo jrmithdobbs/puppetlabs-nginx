@@ -4,8 +4,11 @@ module Puppet::Parser::Functions
 
     ENDHEREDOC
 
+    Puppet::Parser::Functions.function('any2array')
     Puppet::Parser::Functions.function('flatten')
     Puppet::Parser::Functions.function('tag')
-    function_tag(function_flatten(args))
+    args.each do |arg|
+      function_tag(function_flatten([function_any2array([arg])]))
+    end
   end
 end
