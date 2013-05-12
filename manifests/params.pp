@@ -95,7 +95,6 @@ class nginx::params(
   $nx_service_restart = "/etc/init.d/nginx configtest && /etc/init.d/nginx restart",
 
   # Facilitate usage of nginx module with exported and virtualized resources.
-  $tag_prefix = 'nginx::run',
-  $run_tag = "${::nginx::params::tag_prefix}::${::fqdn}"
+  $tag_prefix = 'nginx::run'
 ) {
 }
