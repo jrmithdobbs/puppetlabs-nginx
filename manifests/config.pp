@@ -97,11 +97,11 @@ class nginx::config inherits nginx::params {
   }
 
   ## Realize all locally defined nginx resources
-  Nginx::Resource::Upstream <| ensure == present |>
-  Nginx::Resource::Vhost <| ensure == present |>
-  Nginx::Resource::Location <| ensure == present |>
+  Nginx::Resource::Upstream <| tag == $::nginx::params::tag_prefix |>
+  Nginx::Resource::Vhost <| tag == $::nginx::params::tag_prefix |>
+  Nginx::Resource::Location <| tag == $::nginx::params::tag_prefix |>
   ## Realize all exported nginx resources defined to run on us
-  Nginx::Resource::Upstream <<| ensure == present and tag == $run_tag |>>
-  Nginx::Resource::Vhost <<| ensure == present and tag == $run_tag |>>
-  Nginx::Resource::Location <<| ensure == present and tag == $run_tag |>>
+  Nginx::Resource::Upstream <<| tag == $::nginx::params::tag_prefix and tag == $run_tag |>>
+  Nginx::Resource::Vhost <<| tag == $::nginx::params::tag_prefix and tag == $run_tag |>>
+  Nginx::Resource::Location <<| tag == $::nginx::params::tag_prefix and tag == $run_tag |>>
 }
