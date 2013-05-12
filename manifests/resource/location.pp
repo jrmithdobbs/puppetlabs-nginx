@@ -72,6 +72,9 @@ define nginx::resource::location(
   require concat::setup
 
   # Tagging stuff
+  if $ensure != absent {
+    tag($::nginx::params::tag_prefix)
+  }
   tag_array(regsubst($run_host,'^','nginx::run::'))
 
   $target = "${::nginx::params::nx_conf_dir}/conf.d/vhost_${vhost_order}_${vhost}.conf"

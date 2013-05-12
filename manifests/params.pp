@@ -92,6 +92,10 @@ class nginx::params(
   # Some init scripts do a configtest, some don't. If configtest_enable it's true
   # then service restart will take $nx_service_restart value, forcing configtest.
   $nx_configtest_enable	 = false,
-  $nx_service_restart = "/etc/init.d/nginx configtest && /etc/init.d/nginx restart"
+  $nx_service_restart = "/etc/init.d/nginx configtest && /etc/init.d/nginx restart",
+
+  # Facilitate usage of nginx module with exported and virtualized resources.
+  $tag_prefix = "nginx::run",
+  $run_tag = "${::nginx::params::tag_prefix}::${::fqdn}"
 ) {
 }
