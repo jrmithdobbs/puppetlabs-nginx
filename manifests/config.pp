@@ -90,7 +90,7 @@ class nginx::config inherits nginx::params {
     ;
     "${::nginx::params::nx_conf_dir}/conf.d/upstream.conf-from_config":
       target => "${::nginx::params::nx_conf_dir}/conf.d/upstream.conf",
-      content => '# upstream.conf',
+      content => "# upstream.conf\n",
       order => '001',
     ;
   }
